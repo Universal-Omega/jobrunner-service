@@ -17,12 +17,12 @@ class RedisJobRunnerService extends RedisJobService {
 		$this->notice( "Starting job spawner loop(s)..." );
 
 		$host = gethostname();
-		$prioMap = array(); // map of (id => (current priority, since))
+		$prioMap = []; // map of (id => (current priority, since))
 		$pipeline = new JobRunnerPipeline( $this );
 		foreach ( $this->loopMap as $loop => $info ) {
 			for ( $i=0; $i < $info['runners']; ++$i ) {
 				$pipeline->initSlot( $loop, $i );
-				$prioMap[$loop] = array( 'high' => (bool)mt_rand( 0, 1 ), 'since' => time() );
+				$prioMap[$loop] = [ 'high' => (bool)mt_rand( 0, 1 ), 'since' => time() ];
 			}
 			$this->notice( "Initialized loop $loop with {$info['runners']} runner(s)." );
 		}
@@ -123,7 +123,7 @@ class RedisJobRunnerService extends RedisJobService {
 	 * @return array Cached map of (job type => domain => UNIX timestamp)
 	 */
 	private function &getReadyQueueMap() {
-		static $pendingDBs = array(); // cache
+		static $pendingDBs = []; // cache
 		static $cacheTimestamp = 0; // UNIX timestamp
 
 		$now = microtime( true );
@@ -158,11 +158,11 @@ class RedisJobRunnerService extends RedisJobService {
 			$map = $this->redisCmdHA(
 				$this->aggrSrvs,
 				'hGetAll',
-				array( $this->getReadyQueueKey() )
+				[ $this->getReadyQueueKey() ]
 			);
 			if ( is_array( $map ) ) {
 				unset( $map['_epoch'] );
-				$pendingByType = array();
+				$pendingByType = [];
 				foreach ( $map as $key => $time ) {
 					list( $type, $domain ) = $this->dencQueueName( $key );
 					$pendingByType[$type][$domain] = $time;
@@ -183,5 +183,5 @@ ini_set( 'display_errors', 1 );
 set_time_limit( 0 );
 ini_set( 'memory_limit', '256M' );
 RedisJobRunnerService::init(
-	getopt( '', array( 'config-file::', 'help', 'verbose' ) )
+	getopt( '', [ 'config-file::', 'help', 'verbose' ] )
 )->main();
