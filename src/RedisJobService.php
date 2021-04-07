@@ -7,31 +7,31 @@ abstract class RedisJobService {
 	const MAX_UDP_SIZE_STR = 512;
 
 	/** @var array List of IP:<port> entries */
-	protected $queueSrvs = array();
+	protected $queueSrvs = [];
 	/** @var array List of IP:<port> entries */
-	protected $aggrSrvs = array();
+	protected $aggrSrvs = [];
 	/** @var string Redis password */
 	protected $password;
 	/** @var string IP address or hostname */
 	protected $statsdHost;
 	/** @var array statsd packets pending sending */
-	private $statsdPackets = array();
+	private $statsdPackets = [];
 	/** @var integer Port number */
 	protected $statsdPort;
 
 	/** @var bool */
 	protected $verbose;
 	/** @var array Map of (job type => integer seconds) */
-	protected $claimTTLMap = array();
+	protected $claimTTLMap = [];
 	/** @var array Map of (job type => integer) */
-	protected $attemptsMap = array();
+	protected $attemptsMap = [];
 
 	/** @var array Map of (id => (include,exclude,low-priority,count) */
-	public $loopMap = array();
+	public $loopMap = [];
 	/** @var array Map of (job type => integer) */
-	public $maxRealMap = array();
+	public $maxRealMap = [];
 	/** @var array Map of (job type => integer) */
-	public $maxMemMap = array();
+	public $maxMemMap = [];
 	/** @var array String command to run jobs and return the status JSON blob */
 	public $dispatcher;
 
@@ -65,9 +65,9 @@ abstract class RedisJobService {
 	public $hpMaxTime = 30;
 
 	/** @var array Map of (server => Redis object) */
-	protected $conns = array();
+	protected $conns = [];
 	/** @var array Map of (server => timestamp) */
-	protected $downSrvs = array();
+	protected $downSrvs = [];
 
 	/**
 	 * @param array $args
@@ -126,9 +126,9 @@ abstract class RedisJobService {
 				continue; // loop disabled
 			}
 
-			foreach ( array( 'include', 'exclude', 'low-priority' ) as $k ) {
+			foreach ( [ 'include', 'exclude', 'low-priority' ] as $k ) {
 				if ( !isset( $group[$k] ) ) {
-					$group[$k] = array();
+					$group[$k] = [];
 				} elseif ( !is_array( $group[$k] ) ) {
 					throw new InvalidArgumentException(
 						"Invalid '$k' value for runner group '$name'." );
@@ -222,7 +222,7 @@ abstract class RedisJobService {
 	public function dencQueueName( $name ) {
 		list( $type, $domain ) = explode( '/', $name, 2 );
 
-		return array( rawurldecode( $type ), rawurldecode( $domain ) );
+		return [ rawurldecode( $type ), rawurldecode( $domain ) ];
 	}
 
 	/**
@@ -301,12 +301,12 @@ abstract class RedisJobService {
 	 * @return mixed
 	 * @throws RedisException
 	 */
-	public function redisCmd( Redis $conn, $cmd, array $args = array() ) {
+	public function redisCmd( Redis $conn, $cmd, array $args = [] ) {
 		$conn->clearLastError();
 		// we had some job runners oom'ing on this call, log what we are
 		// doing so there is relevant information next to the oom
 		$this->debug( "Redis cmd: $cmd " . json_encode( $args ) );
-		$res = call_user_func_array( array( $conn, $cmd ), $args );
+		$res = call_user_func_array( [ $conn, $cmd ], $args );
 		if ( $conn->getLastError() ) {
 			// Make all errors be exceptions instead of "most but not all".
 			// This will let the caller know to reset the connection to be safe.
@@ -324,7 +324,7 @@ abstract class RedisJobService {
 	 * @return mixed
 	 * @throws RedisExceptionHA
 	 */
-	public function redisCmdHA( array $servers, $cmd, array $args = array() ) {
+	public function redisCmdHA( array $servers, $cmd, array $args = [] ) {
 		foreach ( $servers as $server ) {
 			$conn = $this->getRedisConn( $server );
 			if ( $conn ) {
@@ -348,7 +348,7 @@ abstract class RedisJobService {
 	 * @return integer Number of servers updated
 	 * @throws RedisExceptionHA
 	 */
-	public function redisCmdBroadcast( array $servers, $cmd, array $args = array() ) {
+	public function redisCmdBroadcast( array $servers, $cmd, array $args = [] ) {
 		$updated = 0;
 
 		foreach ( $servers as $server ) {
@@ -400,13 +400,13 @@ abstract class RedisJobService {
 			$packets = array_reduce(
 				$this->statsdPackets,
 				[ __CLASS__, 'reduceStatPackets' ],
-				array()
+				[]
 			);
 			foreach ( $packets as $packet ) {
 				$this->sendStatsPacket( $packet );
 			}
 		}
-		$this->statsdPackets = array();
+		$this->statsdPackets = [];
 	}
 
 	/**
