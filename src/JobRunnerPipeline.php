@@ -4,7 +4,7 @@ class JobRunnerPipeline {
 	/** @var RedisJobService */
 	protected $srvc;
 	/** @var array (loop ID => slot ID => slot status array) */
-	protected $procMap = array();
+	protected $procMap = [];
 
 	/**
 	 * @param RedisJobService $service
@@ -18,9 +18,9 @@ class JobRunnerPipeline {
 	 * @param int $slot
 	 */
 	public function initSlot( $loop, $slot ) {
-		$this->procMap[$loop][$slot] = array(
+		$this->procMap[$loop][$slot] = [
 			'handle'  => false,
-			'pipes'   => array(),
+			'pipes'   => [],
 			'db'      => null,
 			'type'    => null,
 			'cmd'     => null,
@@ -28,7 +28,7 @@ class JobRunnerPipeline {
 			'sigtime' => 0,
 			'stdout' => '',
 			'stderr' => ''
-		);
+		];
 	}
 
 	/**
@@ -125,7 +125,7 @@ class JobRunnerPipeline {
 		}
 		unset( $procSlot );
 
-		return array( $free, $new );
+		return [ $free, $new ];
 	}
 
 	/**
@@ -146,15 +146,15 @@ class JobRunnerPipeline {
 			$include = array_merge( $include, array_keys( $pending ) );
 		}
 
-		$candidateTypes = array_diff( array_unique( $include ), $exclude, array( '*' ) );
+		$candidateTypes = array_diff( array_unique( $include ), $exclude, [ '*' ] );
 
-		$candidates = array(); // list of (type, db)
+		$candidates = []; // list of (type, db)
 		// Flatten the tree of candidates into a flat list so that a random
 		// item can be selected, weighing each queue (type/db tuple) equally.
 		foreach ( $candidateTypes as $type ) {
 			if ( isset( $pending[$type] ) ) {
 				foreach ( $pending[$type] as $db => $since ) {
-					$candidates[] = array( $type, $db );
+					$candidates[] = [ $type, $db ];
 				}
 			}
 		}
@@ -184,7 +184,7 @@ class JobRunnerPipeline {
 
 		// Make sure the runner is launched with various time/memory limits.
 		// Nice the process so things like ssh and deployment scripts are fine.
-		$what = $with = array();
+		$what = $with = [];
 		foreach ( compact( 'db', 'type', 'maxtime', 'maxmem' ) as $k => $v ) {
 			$what[] = "%($k)u";
 			$with[] = rawurlencode( $v );
@@ -194,11 +194,11 @@ class JobRunnerPipeline {
 		// The dispatcher might be runJobs.php, curl, or wget
 		$cmd = str_replace( $what, $with, $this->srvc->dispatcher );
 
-		$descriptors = array(
-			0 => array( "pipe", "r" ), // stdin (child)
-			1 => array( "pipe", "w" ), // stdout (child)
-			2 => array( "pipe", "w" ) // stderr (child)
-		);
+		$descriptors = [
+			0 => [ "pipe", "r" ], // stdin (child)
+			1 => [ "pipe", "w" ], // stdout (child)
+			2 => [ "pipe", "w" ] // stderr (child)
+		];
 
 		$this->srvc->debug( "Spawning runner in loop $loop at slot $slot ($type, $db):\n\t$cmd." );
 
