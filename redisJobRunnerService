@@ -137,7 +137,7 @@ class RedisJobRunnerService extends RedisJobService {
 
 		$latestPendingDBs = $this->loadReadyQueueMap();
 		if ( $latestPendingDBs === [] ) {
-		    return $pendingDBs; // use cache value
+			return $pendingDBs; // use cache value
 		}
 
 		$pendingDBs = $latestPendingDBs;
