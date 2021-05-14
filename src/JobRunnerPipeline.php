@@ -3,6 +3,7 @@
 class JobRunnerPipeline {
 	/** @var RedisJobService */
 	protected $srvc;
+
 	/** @var array (loop ID => slot ID => slot status array) */
 	protected $procMap = [];
 
@@ -19,12 +20,12 @@ class JobRunnerPipeline {
 	 */
 	public function initSlot( string $loop, int $slot ) {
 		$this->procMap[$loop][$slot] = [
-			'handle'  => false,
-			'pipes'   => [],
-			'db'      => null,
-			'type'    => null,
-			'cmd'     => null,
-			'stime'   => 0,
+			'handle' => false,
+			'pipes' => [],
+			'db' => null,
+			'type' => null,
+			'cmd' => null,
+			'stime' => 0,
 			'sigtime' => 0,
 			'stdout' => '',
 			'stderr' => ''
@@ -49,6 +50,7 @@ class JobRunnerPipeline {
 				$procSlot['stdout'] .= fread( $procSlot['pipes'][1], 65535 );
 				$procSlot['stderr'] .= fread( $procSlot['pipes'][2], 65535 );
 			}
+
 			if ( $status && $status['running'] ) {
 				$maxReal = isset( $this->srvc->maxRealMap[$procSlot['type']] )
 					? $this->srvc->maxRealMap[$procSlot['type']]
@@ -77,10 +79,12 @@ class JobRunnerPipeline {
 						unset( $pending[$procSlot['type']][$procSlot['db']] );
 						$this->srvc->debug( "Queue '{$procSlot['db']}/{$procSlot['type']}' emptied." );
 					}
+
 					$ok = 0; // jobs that ran OK
 					foreach ( $result['jobs'] as $status ) {
 						$ok += ( $status['status'] === 'ok' ) ? 1 : 0;
 					}
+
 					$failed = count( $result['jobs'] ) - $ok;
 					$this->srvc->incrStats( "pop.{$procSlot['type']}.ok.{$host}", $ok );
 					$this->srvc->incrStats( "pop.{$procSlot['type']}.failed.{$host}", $failed );
@@ -98,6 +102,7 @@ class JobRunnerPipeline {
 					if ( strlen( $error ) > 4096 ) { // truncate long errors
 						$error = mb_substr( $error, 0, 4096 ) . '...';
 					}
+
 					$this->srvc->error( "Runner loop $loop process in slot $slot " .
 						"gave status '{$status['exitcode']}':\n$cmd\n\t$error" );
 					$this->srvc->incrStats( 'runner-status.error' );
@@ -108,16 +113,19 @@ class JobRunnerPipeline {
 				$this->closeRunner( $loop, $slot, $procSlot );
 				$this->srvc->incrStats( 'runner-status.none' );
 			}
+
 			++$free;
 			$queue = $this->selectQueue( $loop, $prioMap, $pending );
 			if ( !$queue ) {
 				break;
 			}
+
 			// Spawn a job runner for this loop ID
 			$highPrio = $prioMap[$loop]['high'];
 			$this->spawnRunner( $loop, $slot, $highPrio, $queue, $procSlot );
 			++$new;
 		}
+
 		unset( $procSlot );
 
 		return [ $free, $new ];
@@ -132,11 +140,13 @@ class JobRunnerPipeline {
 	protected function selectQueue( int $loop, array $prioMap, array $pending ) {
 		$include = $this->srvc->loopMap[$loop]['include'];
 		$exclude = $this->srvc->loopMap[$loop]['exclude'];
+
 		if ( $prioMap[$loop]['high'] ) {
 			$exclude = array_merge( $exclude, $this->srvc->loopMap[$loop]['low-priority'] );
 		} else {
 			$include = array_merge( $include, $this->srvc->loopMap[$loop]['low-priority'] );
 		}
+
 		if ( in_array( '*', $include ) ) {
 			$include = array_merge( $include, array_keys( $pending ) );
 		}
@@ -190,9 +200,9 @@ class JobRunnerPipeline {
 		$cmd = str_replace( $what, $with, $this->srvc->dispatcher );
 
 		$descriptors = [
-			0 => [ "pipe", "r" ], // stdin (child)
-			1 => [ "pipe", "w" ], // stdout (child)
-			2 => [ "pipe", "w" ] // stderr (child)
+			0 => [ 'pipe', 'r' ], // stdin (child)
+			1 => [ 'pipe', 'w' ], // stdout (child)
+			2 => [ 'pipe', 'w' ] // stderr (child)
 		];
 
 		$this->srvc->debug( "Spawning runner in loop $loop at slot $slot ($type, $db):\n\t$cmd." );
@@ -224,6 +234,7 @@ class JobRunnerPipeline {
 		} else {
 			$this->srvc->error( "Could not spawn process in loop $loop: $cmd" );
 			$this->srvc->incrStats( 'runner-status.error' );
+
 			return false;
 		}
 	}
@@ -240,11 +251,13 @@ class JobRunnerPipeline {
 				fclose( $procSlot['pipes'][1] );
 				$procSlot['pipes'][1] = false;
 			}
+
 			if ( $procSlot['pipes'][2] !== false ) {
 				fclose( $procSlot['pipes'][2] );
 				$procSlot['pipes'][2] = false;
 			}
 		}
+
 		if ( $procSlot['handle'] ) {
 			$this->srvc->debug( "Closing process in loop $loop at slot $slot." );
 			if ( $signal !== null ) {
@@ -255,6 +268,7 @@ class JobRunnerPipeline {
 				proc_close( $procSlot['handle'] );
 			}
 		}
+
 		$procSlot['handle'] = false;
 		$procSlot['db'] = null;
 		$procSlot['type'] = null;
@@ -271,14 +285,17 @@ class JobRunnerPipeline {
 				if ( !$procSlot['handle'] ) {
 					continue;
 				}
+
 				fclose( $procSlot['pipes'][1] );
 				fclose( $procSlot['pipes'][2] );
 				$status = proc_get_status( $procSlot['handle'] );
 				print "Sending SIGTERM to {$status['pid']}.\n";
 				proc_terminate( $procSlot['handle'] );
 			}
+
 			unset( $procSlot );
 		}
+
 		unset( $procSlots );
 	}
 }
